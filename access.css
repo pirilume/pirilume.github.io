@@ -1,1 +1,9 @@
 .account-panel{padding-block:3rem;scroll-margin-top:2rem}.account-panel form{display:grid;gap:1rem;max-width:36rem}.account-panel label{display:grid;gap:.4rem;font-size:1rem}.account-panel input{font:inherit;padding:.85rem;border:1px solid #56757d;border-radius:.4rem;background:#fff;color:#091f2c;width:100%;box-sizing:border-box}.account-actions,.account-books{display:flex;gap:.75rem;flex-wrap:wrap;margin-block:1rem}.account-panel .text-link{font:inherit;background:transparent;border:0;color:inherit;cursor:pointer}.account-panel[aria-busy=true] button{opacity:.6;pointer-events:none}.account-panel [hidden]{display:none!important}.account-panel button:disabled{opacity:.6;cursor:default}@media(max-width:600px){.account-actions>*{width:100%}.account-books{display:grid}.account-panel{padding-block:2rem}}
+/* Modo leitor: conta logada e coleção liberada vira portal de leitura, sem vitrine de venda. */
+body.modo-leitor .review-bar,body.modo-leitor #offer-section,body.modo-leitor #buy-collection-hero,body.modo-leitor .colecao-oferta,body.modo-leitor #faq-compra{display:none}
+body.modo-leitor .collection-card .card-state{color:transparent;position:relative}
+body.modo-leitor .collection-card .card-state::after{content:'Na sua biblioteca';position:absolute;inset:0;color:var(--muted)}
+body.modo-leitor .collection-intro{display:none}
+body.modo-leitor .colecao-intro-leitor[hidden]{display:block!important}
+.card-open-book{display:none}
+body.modo-leitor .card-open-book{display:inline-flex}
