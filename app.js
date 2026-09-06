@@ -232,11 +232,37 @@
     $('voice-status').textContent = sample ? 'Amostra concluída. As vendas ainda não estão abertas.' : 'Fim da história. Agora, uma pequena conversa.';
     panel.scrollIntoView({behavior:'smooth',block:'start'});
   }
+  // Só português: aceita pt-BR/pt-PT (e pt_BR/pt_PT, qualquer caixa). Nada de pt-AO, es-*, en-* etc.
+  function ptLocale(voice) {
+    const lang = String(voice?.lang || '').replace('_', '-');
+    if (/^pt-pt/i.test(lang)) return 'pt-PT';
+    if (/^pt-br/i.test(lang)) return 'pt-BR';
+    return null;
+  }
   function populateVoices(selectNatural = false) {
     if (!synth) return;
     const hasNatural = Boolean(activeBook?.audio);
     const selected = selectNatural && hasNatural ? 'natural' : $('voice-select').value;
-    voices = synth.getVoices().filter(v => /^pt([-_]|$)/i.test(v.lang)).sort((a,b) => rankVoice(b) - rankVoice(a));
+    // Agrupa por variante (pt-BR / pt-PT) pra decidir a qualidade dentro de cada uma
+    // separadamente: uma pt-PT boa não deve sumir só porque existe uma pt-BR melhor, e
+    // vice-versa. Dentro de cada grupo, mantém as vozes de melhor qualidade (rankVoice >= 70:
+    // Natural, Google, Premium/Enhanced, Francisca/Thalita/Antônio/Luciana/Fernanda); só cai
+    // para as genéricas/antigas quando o grupo não tem nenhuma de qualidade, pra nunca ficar
+    // com o grupo vazio.
+    const groups = new Map();
+    synth.getVoices().forEach(v => {
+      const locale = ptLocale(v);
+      if (!locale) return;
+      if (!groups.has(locale)) groups.set(locale, []);
+      groups.get(locale).push(v);
+    });
+    voices = [];
+    groups.forEach(list => {
+      const ranked = list.slice().sort((a,b) => rankVoice(b) - rankVoice(a));
+      const quality = ranked.filter(v => rankVoice(v) >= 70);
+      voices.push(...(quality.length ? quality : ranked));
+    });
+    voices.sort((a,b) => rankVoice(b) - rankVoice(a));
     const automatic = document.createElement('option');
     automatic.value = ''; automatic.textContent = 'Automática · melhor voz em português';
     const options = [];
@@ -246,7 +272,10 @@
       options.push(natural);
     }
     options.push(automatic,...voices.map(v => {
-      const o = document.createElement('option'); o.value = v.voiceURI; o.textContent = v.name + ' · ' + v.lang; return o;
+      const o = document.createElement('option');
+      o.value = v.voiceURI;
+      o.textContent = shortVoiceName(v.name) + (ptLocale(v) === 'pt-PT' ? ' · Portugal' : '');
+      return o;
     }));
     $('voice-select').replaceChildren(...options);
     if (hasNatural && selected === 'natural') $('voice-select').value = 'natural';
