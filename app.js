@@ -26,6 +26,7 @@
       .replace(/Microsoft\s+/gi, '')
       .replace(/\bOnline\b/gi, '')
       .replace(/-?\s*Portuguese\s*\(Brazil\)/gi, '')
+      .replace(/-?\s*Portuguese\s*\(Portugal\)/gi, '')
       .replace(/\(\s*\)/g, '')
       .replace(/\s{2,}/g, ' ')
       .trim();
