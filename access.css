@@ -7,3 +7,14 @@ body.modo-leitor .collection-intro{display:none}
 body.modo-leitor .colecao-intro-leitor[hidden]{display:block!important}
 .card-open-book{display:none}
 body.modo-leitor .card-open-book{display:inline-flex}
+/* Aviso de consentimento (LGPD) para o pixel da Meta: fixo no rodapé da tela, some ao decidir. */
+.consent-banner{position:fixed;left:0;right:0;bottom:0;z-index:60;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;padding:16px 24px;background:#fff7e6;color:#082a35;border-top:2px solid #f5ce78;box-shadow:0 -8px 28px rgba(8,42,53,.28);font:1rem/1.55 var(--sans,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif)}
+.consent-banner p{margin:0;flex:1 1 280px;font-size:.92rem;color:#082a35}
+.consent-banner a{color:#082a35;font-weight:650;text-decoration:underline;text-underline-offset:3px}
+.consent-actions{display:flex;gap:10px;flex-wrap:wrap;flex:0 0 auto}
+.consent-actions button{min-height:44px;padding:10px 20px;border-radius:6px;font:inherit;font-weight:650;font-size:.92rem;cursor:pointer;border:1px solid #082a35}
+.consent-accept{background:#f5ce78;color:#082a35}
+.consent-accept:hover{background:#f8dc9e}
+.consent-essential{background:transparent;color:#082a35}
+.consent-essential:hover{background:rgba(8,42,53,.08)}
+@media(max-width:600px){.consent-banner{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:14px;padding:16px 18px}.consent-banner p{flex:1 1 auto}.consent-actions{width:100%}.consent-actions button{flex:1 1 0}}

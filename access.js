@@ -46,6 +46,7 @@
    const data=await api('/library'); $('owned-books').replaceChildren();
    $('account-buy').hidden=data.unlocked;
    setReaderMode(data.unlocked);
+   if(data.unlocked) window.dispatchEvent(new CustomEvent('pirilume-unlocked'));
    const mp={test_user:'Mercado Pago: vendedor de teste OK. ',production:'Mercado Pago: token de CONTA REAL. Compra de teste bloqueada até trocar pelo vendedor de teste. ',test_credentials:'Mercado Pago: credenciais TEST- (sandbox, sem webhook automático). ',invalid:'Mercado Pago: token não reconhecido. ',unknown:'Mercado Pago: não foi possível verificar o token. ',missing:'Mercado Pago: token ausente. '}[data.mpAccount]||'';
    say(data.unlocked?'Sua coleção está liberada. Escolha uma história.':mode+mp+'Sua coleção ainda não foi liberada. Se acabou de pagar, aguarde a confirmação e verifique novamente.');
    if(data.unlocked) for(const book of window.PIRILUME_BOOKS.filter(b=>!b.free)) {
