@@ -1,6 +1,37 @@
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
+  // Pontua vozes pt-BR/pt-PT do aparelho para a escolha "Automática" preferir a melhor
+  // voz disponível (neural/online) em vez de deixar o navegador cair numa voz robótica antiga.
+  function rankVoice(voice) {
+    if (!voice) return -1;
+    const lang = String(voice.lang || '').replace('_', '-');
+    const name = String(voice.name || '');
+    const isPtPT = /^pt-PT/i.test(lang);
+    let score;
+    if (isPtPT) score = 10;
+    else if (/natural/i.test(name)) score = 100;
+    else if (/google/i.test(name)) score = 80;
+    else if (/premium|enhanced/i.test(name)) score = 75;
+    else if (/francisca|thalita|ant[oô]nio|luciana|fernanda/i.test(name)) score = 70;
+    else score = 40;
+    if (voice.default) score += 1;
+    if (voice.localService === false) score += 2;
+    return score;
+  }
+  // Nome curto pra status de leitura: "Microsoft Francisca Online (Natural) - Portuguese (Brazil)" -> "Francisca (Natural)".
+  function shortVoiceName(name) {
+    if (!name) return '';
+    return String(name)
+      .replace(/Microsoft\s+/gi, '')
+      .replace(/\bOnline\b/gi, '')
+      .replace(/-?\s*Portuguese\s*\(Brazil\)/gi, '')
+      .replace(/\(\s*\)/g, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+  window.PIRILUME_RANK_VOICE = rankVoice;
+  window.PIRILUME_SHORT_VOICE_NAME = shortVoiceName;
   let toastTimer;
   function toast(message) {
     const node = $('toast');
@@ -205,9 +236,9 @@
     if (!synth) return;
     const hasNatural = Boolean(activeBook?.audio);
     const selected = selectNatural && hasNatural ? 'natural' : $('voice-select').value;
-    voices = synth.getVoices().filter(v => /^pt([-_]|$)/i.test(v.lang));
+    voices = synth.getVoices().filter(v => /^pt([-_]|$)/i.test(v.lang)).sort((a,b) => rankVoice(b) - rankVoice(a));
     const automatic = document.createElement('option');
-    automatic.value = ''; automatic.textContent = 'Automática · português';
+    automatic.value = ''; automatic.textContent = 'Automática · melhor voz em português';
     const options = [];
     if (hasNatural) {
       const natural = document.createElement('option');
@@ -247,7 +278,7 @@
     }
     function highlightAndStatus(voiceLabel) {
       document.querySelectorAll('#story-text p').forEach((p,i) => p.classList.toggle('is-speaking',!readAnswer && i === paragraph));
-      $('voice-status').textContent = (readAnswer ? 'Ouvindo a descoberta da cena ' : 'Ouvindo a cena ') + (scene + 1) + '. ' + voiceLabel;
+      $('voice-status').textContent = (readAnswer ? 'Ouvindo a descoberta da cena ' : 'Ouvindo a cena ') + (scene + 1) + (voiceLabel ? ' · ' + voiceLabel : '.');
     }
     function afterParagraph() { if (token === run) { paragraph++; readNext(); } }
     function speakUtterance() {
@@ -255,11 +286,16 @@
       const utterance = new SpeechSynthesisUtterance(paragraphs[paragraph]);
       utteranceRef = utterance;
       utterance.lang = activeBook?.language || 'pt-BR'; utterance.rate = .9; utterance.pitch = 1;
-      const selected = voices.find(v => v.voiceURI === $('voice-select').value) || voices.find(v => /^pt[-_]BR$/i.test(v.lang)) || voices[0];
+      // Automática (valor vazio) ou seleção manual que sumiu da lista: usa a voz de maior
+      // pontuação (voices já vem ordenada por rankVoice em populateVoices). Escolha manual
+      // válida do usuário é sempre respeitada.
+      const manualValue = $('voice-select').value;
+      const manualVoice = manualValue && manualValue !== 'natural' ? voices.find(v => v.voiceURI === manualValue) : null;
+      const selected = manualVoice || voices[0];
       if (selected) utterance.voice = selected;
       utterance.onstart = () => {
         if (token !== run) return;
-        highlightAndStatus(selected ? selected.name + '.' : 'Voz automática em português.');
+        highlightAndStatus(selected ? shortVoiceName(selected.name) : 'Voz automática em português');
       };
       utterance.onend = () => afterParagraph();
       utterance.onerror = event => {
