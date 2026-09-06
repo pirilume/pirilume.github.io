@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "default": "francisca",
+  "voices": [
+    {
+      "id": "francisca",
+      "label": "Francisca",
+      "voice": "pt-BR-FranciscaNeural",
+      "cues": "francisca/cues.json"
+    },
+    {
+      "id": "thalita",
+      "label": "Thalita",
+      "voice": "pt-BR-ThalitaNeural",
+      "cues": "thalita/cues.json"
+    },
+    {
+      "id": "antonio",
+      "label": "Antonio",
+      "voice": "pt-BR-AntonioNeural",
+      "cues": "antonio/cues.json"
+    }
+  ]
+}

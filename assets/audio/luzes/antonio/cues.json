@@ -1,0 +1,185 @@
+{
+  "version": 1,
+  "provider": "Azure AI Speech",
+  "voice": "pt-BR-AntonioNeural",
+  "scenes": [
+    {
+      "src": "cena-01.mp3",
+      "paragraphs": [
+        [
+          0.0,
+          14.52
+        ],
+        [
+          15.12,
+          30.0
+        ],
+        [
+          30.6,
+          42.74
+        ]
+      ],
+      "answer": {
+        "src": "cena-01-descoberta.mp3",
+        "start": 0.0,
+        "end": 8.06
+      }
+    },
+    {
+      "src": "cena-02.mp3",
+      "paragraphs": [
+        [
+          0.0,
+          17.95
+        ],
+        [
+          18.55,
+          34.75
+        ],
+        [
+          35.35,
+          52.56
+        ]
+      ],
+      "answer": {
+        "src": "cena-02-descoberta.mp3",
+        "start": 0.0,
+        "end": 8.28
+      }
+    },
+    {
+      "src": "cena-03.mp3",
+      "paragraphs": [
+        [
+          0.0,
+          15.43
+        ],
+        [
+          16.03,
+          29.61
+        ],
+        [
+          30.21,
+          49.84
+        ]
+      ],
+      "answer": {
+        "src": "cena-03-descoberta.mp3",
+        "start": 0.0,
+        "end": 7.92
+      }
+    },
+    {
+      "src": "cena-04.mp3",
+      "paragraphs": [
+        [
+          0.0,
+          18.22
+        ],
+        [
+          18.82,
+          35.6
+        ],
+        [
+          36.2,
+          52.21
+        ]
+      ],
+      "answer": {
+        "src": "cena-04-descoberta.mp3",
+        "start": 0.0,
+        "end": 8.54
+      }
+    },
+    {
+      "src": "cena-05.mp3",
+      "paragraphs": [
+        [
+          0.0,
+          15.38
+        ],
+        [
+          15.98,
+          31.77
+        ],
+        [
+          32.37,
+          48.83
+        ]
+      ],
+      "answer": {
+        "src": "cena-05-descoberta.mp3",
+        "start": 0.0,
+        "end": 6.94
+      }
+    },
+    {
+      "src": "cena-06.mp3",
+      "paragraphs": [
+        [
+          0.0,
+          20.45
+        ],
+        [
+          21.05,
+          33.22
+        ],
+        [
+          33.82,
+          49.06
+        ]
+      ],
+      "answer": {
+        "src": "cena-06-descoberta.mp3",
+        "start": 0.0,
+        "end": 7.01
+      }
+    },
+    {
+      "src": "cena-07.mp3",
+      "paragraphs": [
+        [
+          0.0,
+          18.0
+        ],
+        [
+          18.6,
+          33.6
+        ],
+        [
+          34.2,
+          52.73
+        ]
+      ],
+      "answer": {
+        "src": "cena-07-descoberta.mp3",
+        "start": 0.0,
+        "end": 8.59
+      }
+    },
+    {
+      "src": "cena-08.mp3",
+      "paragraphs": [
+        [
+          0.0,
+          11.69
+        ],
+        [
+          12.29,
+          30.29
+        ],
+        [
+          30.89,
+          47.57
+        ]
+      ],
+      "answer": {
+        "src": "cena-08-descoberta.mp3",
+        "start": 0.0,
+        "end": 7.51
+      }
+    }
+  ],
+  "generated_at": "2026-09-06T14:36:11",
+  "characters": 5158
+}

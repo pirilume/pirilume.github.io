@@ -8,22 +8,44 @@
   };
   window.PIRILUME_BOOKS = [free,...(window.PIRILUME_COLLECTION || [])];
   window.PIRILUME_ACTIVE_BOOK = free;
-  // Narração natural (MP3) do livro gratuito é opcional: se cues.json não existir (caso normal
-  // hoje), a busca falha em silêncio e o leitor segue com a voz do aparelho, sem atraso nem erro.
+  // Narração natural (MP3) do livro gratuito é opcional e suporta várias vozes: se voices.json
+  // existir, cada voz tem seu próprio cues.json numa subpasta; senão tenta o cues.json antigo
+  // (uma voz só). Se nenhum existir (caso normal hoje), a busca falha em silêncio e o leitor
+  // segue com a voz do aparelho, sem atraso nem erro na renderização.
   const isAbsoluteAudioSrc = src => /^[a-z][a-z0-9+.-]*:\/\//i.test(src) || src.startsWith('/');
-  fetch('assets/audio/luzes/cues.json').then(response => response.ok ? response.json() : null).then(cues => {
-    if (!cues || !Array.isArray(cues.scenes)) return;
-    const prefix = 'assets/audio/luzes/';
-    free.audio = {
-      ...cues,
-      scenes: cues.scenes.map(scene => {
-        const resolve = src => src ? (isAbsoluteAudioSrc(src) ? src : prefix + src) : null;
-        const answer = scene.answer && !Array.isArray(scene.answer) ? { ...scene.answer, src: resolve(scene.answer.src) } : scene.answer;
-        return { ...scene, src: resolve(scene.src), answer };
-      })
-    };
+  const audioBase = 'assets/audio/luzes/';
+  const loadAudioJson = path => fetch(audioBase + path).then(response => response.ok ? response.json() : null).catch(() => null);
+  const buildScenes = (cues, prefix) => {
+    const resolve = src => src ? (isAbsoluteAudioSrc(src) ? src : prefix + src) : null;
+    return cues.scenes.map(scene => {
+      const answer = scene.answer && !Array.isArray(scene.answer) ? { ...scene.answer, src: resolve(scene.answer.src) } : scene.answer;
+      return { ...scene, src: resolve(scene.src), answer };
+    });
+  };
+  (async () => {
+    let voices = null, defaultId = null;
+    const manifest = await loadAudioJson('voices.json');
+    if (manifest && Array.isArray(manifest.voices) && manifest.voices.length) {
+      const built = [];
+      for (const v of manifest.voices) {
+        if (!v || typeof v.id !== 'string' || typeof v.cues !== 'string') continue;
+        const cues = await loadAudioJson(v.cues);
+        if (!cues || !Array.isArray(cues.scenes)) continue;
+        const folder = v.cues.includes('/') ? v.cues.slice(0, v.cues.lastIndexOf('/') + 1) : '';
+        built.push({ id: v.id, label: v.label || v.id, voice: v.voice, scenes: buildScenes(cues, audioBase + folder) });
+      }
+      if (built.length) { voices = built; defaultId = manifest.default; }
+    }
+    if (!voices) {
+      const legacy = await loadAudioJson('cues.json');
+      if (legacy && Array.isArray(legacy.scenes)) { voices = [{ id: 'natural', label: 'voz natural', voice: legacy.voice, scenes: buildScenes(legacy, audioBase) }]; defaultId = 'natural'; }
+    }
+    if (!voices) return;
+    if (!voices.some(v => v.id === defaultId)) defaultId = voices[0].id;
+    const defaultVoice = voices.find(v => v.id === defaultId);
+    free.audio = { default: defaultVoice.id, voices, scenes: defaultVoice.scenes };
     window.dispatchEvent(new CustomEvent('pirilume-audio-ready',{detail:free}));
-  }).catch(() => {});
+  })().catch(() => {});
   const select = document.getElementById('book-picker');
   const grid = document.getElementById('collection-books');
   window.PIRILUME_BOOKS.forEach(book => {

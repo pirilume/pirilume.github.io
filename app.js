@@ -106,8 +106,21 @@
     }
     return player;
   }
+  // O <select> guarda 'natural:<id>' para cada voz do livro; o valor antigo 'natural' (sem
+  // sufixo) continua funcionando e mapeia para a voz default do livro.
+  function naturalVoiceIdFromValue(value) {
+    if (!activeBook?.audio) return null;
+    if (value === 'natural') return activeBook.audio.default;
+    if (value?.startsWith('natural:')) return value.slice(8);
+    return null;
+  }
+  function selectedNaturalVoice() {
+    const id = naturalVoiceIdFromValue($('voice-select').value);
+    if (id == null) return null;
+    return activeBook.audio.voices.find(v => v.id === id) || null;
+  }
   function naturalSelected() {
-    return Boolean(activeBook?.audio) && $('voice-select').value === 'natural';
+    return Boolean(selectedNaturalVoice());
   }
   // Toca um trecho {src,start,end} do player reaproveitado. onStart/onEnd espelham o
   // tratamento que a utterance já tem hoje (destaque + status); onFail cai para a voz do aparelho.
@@ -180,7 +193,7 @@
     document.querySelectorAll('#story-text p').forEach(p => p.classList.remove('is-speaking'));
     speechUI();
     if (clearStatus) {
-      if (activeBook?.audio) $('voice-status').textContent = 'Narração Pirilume disponível. Vozes do aparelho continuam como alternativa.';
+      if (activeBook?.audio) $('voice-status').textContent = 'Narração Pirilume disponível. Escolha a voz acima.';
       else $('voice-status').textContent = synth ? 'Voz de teste do dispositivo. O timbre e a disponibilidade variam conforme o navegador.' : 'Este navegador não oferece narração. Você pode ler a história em voz alta.';
     }
   }
@@ -242,14 +255,13 @@
   }
   function populateVoices(selectNatural = false) {
     if (!synth) return;
-    const hasNatural = Boolean(activeBook?.audio);
-    const selected = selectNatural && hasNatural ? 'natural' : $('voice-select').value;
     // Agrupa por variante (pt-BR / pt-PT) pra decidir a qualidade dentro de cada uma
     // separadamente: uma pt-PT boa não deve sumir só porque existe uma pt-BR melhor, e
     // vice-versa. Dentro de cada grupo, mantém as vozes de melhor qualidade (rankVoice >= 70:
     // Natural, Google, Premium/Enhanced, Francisca/Thalita/Antônio/Luciana/Fernanda); só cai
     // para as genéricas/antigas quando o grupo não tem nenhuma de qualidade, pra nunca ficar
-    // com o grupo vazio.
+    // com o grupo vazio. Essa lista sempre é calculada (mesmo com narração natural disponível),
+    // pois serve de reserva se um trecho gravado falhar na hora de tocar.
     const groups = new Map();
     synth.getVoices().forEach(v => {
       const locale = ptLocale(v);
@@ -264,23 +276,40 @@
       voices.push(...(quality.length ? quality : ranked));
     });
     voices.sort((a,b) => rankVoice(b) - rankVoice(a));
+    // Livro com narração natural: o select mostra SOMENTE as vozes do livro (pedido do dono) -
+    // nenhuma voz do aparelho, nenhuma opção Automática.
+    if (activeBook?.audio) {
+      const naturalVoices = activeBook.audio.voices || [];
+      const currentId = naturalVoiceIdFromValue($('voice-select').value);
+      let desiredId;
+      if (selectNatural) {
+        let stored = null;
+        try { stored = localStorage.getItem('pirilume.voice'); } catch { /* leitura de localStorage pode falhar em modo privado */ }
+        desiredId = (stored && stored !== 'natural' && naturalVoices.some(v => v.id === stored)) ? stored : activeBook.audio.default;
+      } else {
+        desiredId = (currentId && naturalVoices.some(v => v.id === currentId)) ? currentId : activeBook.audio.default;
+      }
+      const options = naturalVoices.map(v => {
+        const o = document.createElement('option');
+        o.value = 'natural:' + v.id;
+        o.textContent = 'Narração Pirilume · ' + v.label;
+        return o;
+      });
+      $('voice-select').replaceChildren(...options);
+      $('voice-select').value = 'natural:' + desiredId;
+      return;
+    }
+    const selected = $('voice-select').value;
     const automatic = document.createElement('option');
     automatic.value = ''; automatic.textContent = 'Automática · melhor voz em português';
-    const options = [];
-    if (hasNatural) {
-      const natural = document.createElement('option');
-      natural.value = 'natural'; natural.textContent = 'Narração Pirilume · voz natural';
-      options.push(natural);
-    }
-    options.push(automatic,...voices.map(v => {
+    const options = [automatic,...voices.map(v => {
       const o = document.createElement('option');
       o.value = v.voiceURI;
       o.textContent = shortVoiceName(v.name) + (ptLocale(v) === 'pt-PT' ? ' · Portugal' : '');
       return o;
-    }));
+    })];
     $('voice-select').replaceChildren(...options);
-    if (hasNatural && selected === 'natural') $('voice-select').value = 'natural';
-    else if (voices.some(v => v.voiceURI === selected)) $('voice-select').value = selected;
+    if (voices.some(v => v.voiceURI === selected)) $('voice-select').value = selected;
   }
   function startSpeaking(readAnswer = false) {
     if (!synth || !('SpeechSynthesisUtterance' in window)) return;
@@ -296,8 +325,9 @@
     }
     let paragraph = 0;
     function naturalSegmentFor(index) {
-      if (!naturalSelected()) return null;
-      const naturalScene = activeBook.audio.scenes?.[scene];
+      const voice = selectedNaturalVoice();
+      if (!voice) return null;
+      const naturalScene = voice.scenes?.[scene];
       if (!naturalScene) return null;
       if (!readAnswer && !naturalScene.src) return null;
       const range = readAnswer ? naturalScene.answer : naturalScene.paragraphs?.[index];
@@ -335,10 +365,11 @@
       };
       synth.speak(utterance);
     }
-    function speakNatural(segment) {
+    function speakNatural(segment, voice) {
       engine = 'natural';
+      const label = 'Narração Pirilume' + (voice?.label ? ' · ' + voice.label : '');
       playNaturalSegment(segment, {
-        onStart: () => { if (token === run) highlightAndStatus('Narração Pirilume.'); },
+        onStart: () => { if (token === run) highlightAndStatus(label); },
         onEnd: afterParagraph,
         onFail: () => { if (token === run) speakUtterance(); }
       }, token);
@@ -379,7 +410,7 @@
         return;
       }
       const segment = naturalSegmentFor(paragraph);
-      if (segment) speakNatural(segment); else speakUtterance();
+      if (segment) speakNatural(segment, selectedNaturalVoice()); else speakUtterance();
     }
     readNext();
   }
@@ -394,7 +425,13 @@
     }
   });
   $('stop-button').addEventListener('click',() => stopSpeech());
-  $('voice-select').addEventListener('change',() => stopSpeech());
+  $('voice-select').addEventListener('change',() => {
+    stopSpeech();
+    if (activeBook?.audio) {
+      const id = naturalVoiceIdFromValue($('voice-select').value);
+      if (id) { try { localStorage.setItem('pirilume.voice', id); } catch { /* localStorage pode estar indisponível */ } }
+    }
+  });
   $('auto-advance').addEventListener('change',() => {
     if (!$('auto-advance').checked) {
       clearTimeout(nextNarrationTimer); nextNarrationTimer = null;
