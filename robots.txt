@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Disallow: /termos.html
+Sitemap: https://pirilume.github.io/sitemap.xml

@@ -5,7 +5,7 @@
   const error = document.getElementById('voice-preview-error');
   if (!audio || !button) return;
   function sync() {
-    button.textContent = audio.paused ? '▶ Ouvir prévia · 23 segundos' : 'Ⅱ Pausar prévia';
+    button.textContent = audio.paused ? '▶ Ouvir trecho da narração · 27 segundos' : 'Ⅱ Pausar prévia';
     button.setAttribute('aria-pressed', String(!audio.paused));
   }
   button.addEventListener('click', async () => {

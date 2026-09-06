@@ -494,7 +494,7 @@
         $('end-title').textContent = activeBook.free ? 'Qual foi a sua pequena luz hoje?' : 'O que fica desta aventura?';
       }
       sample = false; limit = story.length;
-      $('reader-mode').textContent = activeBook && !activeBook.free ? 'COLEÇÃO · REVISÃO COMPLETA' : 'HISTÓRIA COMPLETA · GRATUITA';
+      $('reader-mode').textContent = activeBook && !activeBook.free ? 'COLEÇÃO · HISTÓRIA COMPLETA' : 'HISTÓRIA COMPLETA · GRATUITA';
       if (synth) populateVoices(true);
       renderScene(0);
       $('reader-view').scrollIntoView({block:'start'});
