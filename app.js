@@ -238,12 +238,45 @@
       anchor.scrollIntoView({behavior:'smooth',block:'start'});
     }
   }
+  // Convite ao final da leitura: história gratuita oferece a coleção paga; livro pago abre o
+  // próximo (ordem de window.PIRILUME_BOOKS, pulando o gratuito) ou volta à biblioteca no último.
+  function updateEndUpsell() {
+    const upsell = $('end-upsell'), next = $('end-next');
+    if (!upsell || !next) return;
+    const readerMode = document.body.classList.contains('modo-leitor');
+    if (activeBook?.free) {
+      next.hidden = true;
+      const show = !readerMode;
+      upsell.hidden = !show;
+      if (show) window.dispatchEvent(new CustomEvent('pirilume-fim-historia-gratis'));
+      return;
+    }
+    upsell.hidden = true;
+    next.hidden = false;
+    const paidBooks = (window.PIRILUME_BOOKS || []).filter(book => !book.free);
+    const index = paidBooks.findIndex(book => book.id === activeBook?.id);
+    const upcoming = index > -1 ? paidBooks[index + 1] : null;
+    $('end-next-button').hidden = !upcoming;
+    $('end-next-link').hidden = Boolean(upcoming);
+    if (upcoming) {
+      $('end-next-title').textContent = upcoming.title;
+      $('end-next-button').onclick = () => window.PIRILUME_OPEN_BOOK?.(upcoming);
+    } else {
+      $('end-next-title').textContent = 'Você concluiu a coleção';
+    }
+  }
+  $('end-upsell-buy')?.addEventListener('click',() => window.PIRILUME_BUY?.());
+  // O comprador entra em modo-leitor a qualquer momento (login/checkout); se o cartão da
+  // história gratuita já estiver na tela, ele precisa sumir sem exigir recarregar a página.
+  new MutationObserver(() => { if (!$('reader-end').hidden) updateEndUpsell(); })
+    .observe(document.body, { attributes: true, attributeFilter: ['class'] });
   function finish() {
     stopSpeech(false);
     const panel = $(sample ? 'sample-end' : 'reader-end');
     panel.hidden = false;
     $('next-button').disabled = true;
     $('voice-status').textContent = sample ? 'Amostra concluída. As vendas ainda não estão abertas.' : 'Fim da história. Agora, uma pequena conversa.';
+    if (!sample) updateEndUpsell();
     panel.scrollIntoView({behavior:'smooth',block:'start'});
   }
   // Só português: aceita pt-BR/pt-PT (e pt_BR/pt_PT, qualquer caixa). Nada de pt-AO, es-*, en-* etc.

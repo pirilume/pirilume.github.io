@@ -28,9 +28,9 @@
   };
   document.head.appendChild(script);
 
-  // Clique em "Comprar" (topo ou seção da coleção).
+  // Clique em "Comprar" (topo, seção da coleção ou cartão ao final da história gratuita).
   document.addEventListener('click', (e) => {
-    const alvo = e.target.closest('#buy-collection, #buy-collection-hero');
+    const alvo = e.target.closest('#buy-collection, #buy-collection-hero, #end-upsell-buy');
     if (alvo) evento('clique-comprar');
   });
 
@@ -40,6 +40,9 @@
   }
   checarHistoriaGratis();
   window.addEventListener('hashchange', checarHistoriaGratis);
+
+  // Cartão de convite à coleção, exibido ao final da história gratuita (app.js dispara).
+  window.addEventListener('pirilume-fim-historia-gratis', () => evento('terminou-historia-gratis'));
 
   // Retorno do Mercado Pago (?compra= na URL), sem ler valor nem dado pessoal.
   if (new URLSearchParams(location.search).has('compra')) {
