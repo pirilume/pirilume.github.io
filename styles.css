@@ -16,3 +16,16 @@
 .end-upsell .button{min-height:48px}
 .end-upsell .text-link{display:inline-block;margin-top:14px}
 @media(max-width:700px){.end-upsell{padding:20px}.end-upsell .button{width:100%}}
+/* Oferta visível durante a leitura gratuita (não só no fim): faixa discreta desde a cena 1
+   (#offer-strip) e cartão a partir da cena 4 (#offer-mid, reaproveita o visual de .end-upsell).
+   #reader-page tem fundo claro (var(--paper)), por isso usamos aqui a paleta ink/gold/paper
+   dedicada a fundos claros (mesma da faixa de cookies em access.css), em vez de var(--muted)/
+   var(--gold), pensadas para o fundo escuro do restante do site e ilegíveis sobre papel. */
+#offer-strip{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);font-size:.95rem;color:#082a35cc}
+#offer-strip-buy{background:none;border:0;padding:2px 0;margin:0;font:inherit;font-size:inherit;color:#082a35;font-weight:650;text-decoration:underline;text-underline-offset:3px;cursor:pointer;display:inline-flex;align-items:center;min-height:44px}
+/* .end-upsell nasceu fora de .reader-layout, onde o texto ambiente já é claro (var(--ink)),
+   por isso nunca precisou de cor própria no h3. Reaproveitado aqui dentro de .reader-page (que
+   redefine a cor ambiente para var(--paper-ink), escura, pensada para o fundo claro do papel),
+   o título herdaria essa cor escura sobre o fundo escuro do cartão e ficaria ilegível. */
+#offer-mid{margin-top:20px;color:var(--ink)}
+@media(max-width:700px){#offer-strip{font-size:.9rem;padding-top:12px}}

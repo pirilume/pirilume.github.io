@@ -28,9 +28,10 @@
   };
   document.head.appendChild(script);
 
-  // Clique em "Comprar" (topo, seção da coleção ou cartão ao final da história gratuita).
+  // Clique em "Comprar" (topo, seção da coleção, faixa/cartão durante a leitura ou cartão ao
+  // final da história gratuita).
   document.addEventListener('click', (e) => {
-    const alvo = e.target.closest('#buy-collection, #buy-collection-hero, #end-upsell-buy');
+    const alvo = e.target.closest('#buy-collection, #buy-collection-hero, #end-upsell-buy, #offer-strip-buy, #offer-mid-buy');
     if (alvo) evento('clique-comprar');
   });
 
@@ -43,6 +44,16 @@
 
   // Cartão de convite à coleção, exibido ao final da história gratuita (app.js dispara).
   window.addEventListener('pirilume-fim-historia-gratis', () => evento('terminou-historia-gratis'));
+
+  // Curva de abandono da história gratuita: uma cena por evento (app.js garante uma vez por
+  // cena por sessão), para ler no GoatCounter em que cena as pessoas param de ler.
+  window.addEventListener('pirilume-cena', (e) => {
+    const cena = e.detail && e.detail.cena;
+    if (cena) evento('leitura/cena-' + String(cena).padStart(2, '0'));
+  });
+
+  // Cartão de oferta no meio da história gratuita (cena 4), exibido pela primeira vez na sessão.
+  window.addEventListener('pirilume-oferta-meio', () => evento('viu-oferta-meio'));
 
   // Retorno do Mercado Pago (?compra= na URL), sem ler valor nem dado pessoal.
   if (new URLSearchParams(location.search).has('compra')) {

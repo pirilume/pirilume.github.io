@@ -92,6 +92,10 @@
   const audioPreview = $('voice-preview-player');
   if (audioPreview) audioPreview.addEventListener('error', () => { $('voice-preview-error').hidden = false; });
   let scene = 0, limit = 8, sample = false, run = 0, speaking = false, paused = false, voices = [];
+  // Curva de abandono (Tarefa 3) e oferta no meio da leitura (Tarefas 1-2): estado de sessão,
+  // nunca reiniciado ao trocar de cena, só ao recarregar a página.
+  const firedSceneEvents = new Set();
+  let offerMidNotified = false;
   let utteranceRef = null;
   let awaitingInteraction = false, nextNarrationTimer = null;
   // Camada opcional de narração natural (MP3 gravado). `engine` diz qual motor está tocando
@@ -237,6 +241,16 @@
       const anchor = matchMedia('(max-width:900px)').matches ? $('reader-heading') : $('reader-view');
       anchor.scrollIntoView({behavior:'smooth',block:'start'});
     }
+    // Curva de abandono: só a história gratuita, só fora da amostra, uma vez por cena por
+    // sessão (voltar uma cena e avançar de novo não redispara — firedSceneEvents é o registro).
+    if (activeBook?.free && !sample) {
+      const sceneNumber = scene + 1;
+      if (!firedSceneEvents.has(sceneNumber)) {
+        firedSceneEvents.add(sceneNumber);
+        window.dispatchEvent(new CustomEvent('pirilume-cena', { detail: { cena: sceneNumber } }));
+      }
+    }
+    updateStoryOffers();
   }
   // Convite ao final da leitura: história gratuita oferece a coleção paga; livro pago abre o
   // próximo (ordem de window.PIRILUME_BOOKS, pulando o gratuito) ou volta à biblioteca no último.
@@ -266,9 +280,27 @@
     }
   }
   $('end-upsell-buy')?.addEventListener('click',() => window.PIRILUME_BUY?.());
+  // Oferta visível durante a leitura (não só no fim, ver contexto no topo do arquivo): faixa
+  // discreta desde a cena 1 (#offer-strip) e cartão a partir da cena 4 (#offer-mid), ambos só
+  // na história gratuita e nunca para quem já comprou (body.modo-leitor). O cartão substitui a
+  // faixa quando os dois seriam exibidos juntos, para não repetir a mesma oferta na tela.
+  function updateStoryOffers() {
+    const strip = $('offer-strip'), mid = $('offer-mid');
+    if (!strip || !mid) return;
+    const eligible = Boolean(activeBook?.free) && !document.body.classList.contains('modo-leitor');
+    const midVisible = eligible && scene >= 3;
+    mid.hidden = !midVisible;
+    strip.hidden = !eligible || midVisible;
+    if (midVisible && !offerMidNotified) {
+      offerMidNotified = true;
+      window.dispatchEvent(new CustomEvent('pirilume-oferta-meio'));
+    }
+  }
+  $('offer-strip-buy')?.addEventListener('click',() => window.PIRILUME_BUY?.());
+  $('offer-mid-buy')?.addEventListener('click',() => window.PIRILUME_BUY?.());
   // O comprador entra em modo-leitor a qualquer momento (login/checkout); se o cartão da
   // história gratuita já estiver na tela, ele precisa sumir sem exigir recarregar a página.
-  new MutationObserver(() => { if (!$('reader-end').hidden) updateEndUpsell(); })
+  new MutationObserver(() => { if (!$('reader-end').hidden) updateEndUpsell(); updateStoryOffers(); })
     .observe(document.body, { attributes: true, attributeFilter: ['class'] });
   function finish() {
     stopSpeech(false);
