@@ -17,4 +17,4 @@ body.modo-leitor .card-open-book{display:inline-flex}
 .consent-accept:hover{background:#f8dc9e}
 .consent-essential{background:transparent;color:#082a35}
 .consent-essential:hover{background:rgba(8,42,53,.08)}
-@media(max-width:600px){.consent-banner{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:14px;padding:16px 18px}.consent-banner p{flex:1 1 auto}.consent-actions{width:100%}.consent-actions button{flex:1 1 0}}
+@media(max-width:600px){.consent-banner{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:8px;padding:10px 14px;font-size:.85rem;line-height:1.32}.consent-banner p{flex:1 1 auto;font-size:.85rem;line-height:1.32;margin:0}.consent-actions{width:100%;flex-wrap:nowrap;gap:8px}.consent-actions button{flex:1 1 0;min-height:44px;padding:8px 10px;font-size:.85rem}}

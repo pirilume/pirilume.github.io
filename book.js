@@ -28,6 +28,10 @@
   const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   let opening = null, leafAnimation = null, leaf = null;
   let previousIndex = 0, previousPage = null, previousArt = null;
+  // 'pirilume-livro-aberto' mede quem passou da capa de verdade (Instrumentação): dispara uma
+  // única vez por sessão, tanto na abertura automática (chegada por link externo) quanto no
+  // clique manual em #open-book.
+  let livroAbertoDisparado = false;
   const art = document.getElementById('reader-art');
   function fitArt() {
     const index = sceneIndex();
@@ -88,7 +92,7 @@
     voice.value = initialVoice.value;
     voice.dispatchEvent(new Event('change'));
   });
-  function setOpen(value) {
+  function setOpen(value, automatico = false) {
     opening?.cancel(); opening = null;
     open.disabled = false;
     clearLeaf();
@@ -105,6 +109,10 @@
       spread.setAttribute('tabindex', '-1');
       spread.focus({preventScroll: true});
       reader.scrollIntoView({block:'start',behavior:reduced() ? 'auto' : 'smooth'});
+      if (!livroAbertoDisparado) {
+        livroAbertoDisparado = true;
+        window.dispatchEvent(new CustomEvent('pirilume-livro-aberto', {detail: {automatico}}));
+      }
     }
   }
   open.addEventListener('click', async () => {
@@ -165,5 +173,21 @@
     if (document.hidden) { clearLeaf(); if (opening) setOpen(false); }
   });
   syncVoices();
-  setOpen(false);
+  // Tarefa 1: quem chega por link externo (anúncio, bio, WhatsApp) já cai com o hash
+  // #livro/<id> presente no primeiro carregamento. Nesse caso, e só nesse caso (primeiraRota),
+  // o livro abre sozinho — sem capa, sem clique em "Abrir o livro" — reaproveitando o mesmo
+  // setOpen que o clique manual usa, só sem a animação de virar a capa. Navegação interna
+  // posterior (hashchange, tratado acima) sempre volta a fechar e mostrar a capa normalmente.
+  let primeiraRota = true;
+  function tentarAbrirAutomaticamente() {
+    if (!primeiraRota) return false;
+    primeiraRota = false;
+    // app.js já rodou route() de forma síncrona antes deste script (ordem dos <script defer>
+    // no index.html); reader.hidden reflete se o hash apontou para uma leitura válida.
+    const vemDeLivroExterno = location.hash.startsWith('#livro/') && !reader.hidden;
+    if (!vemDeLivroExterno) return false;
+    setOpen(true, true);
+    return true;
+  }
+  if (!tentarAbrirAutomaticamente()) setOpen(false);
 })();

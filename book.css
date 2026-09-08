@@ -90,3 +90,24 @@
   .reading-focus .reader-controls{gap:10px}
   .reading-focus .reader:fullscreen{width:100%;max-width:none;margin:0;padding-inline:max(24px,calc((100vw - min(1440px,max(900px,calc(200dvh - 480px))))/2))}
 }
+
+/* Celular: quem chega de anúncio precisa ver a HISTÓRIA (arte + texto) na primeira dobra,
+   não um painel de controles. .reader-heading e .reader-controls viram display:contents
+   só aqui para que seus dois miolos (título x utilitários; navegação x áudio) recebam
+   `order` independente dentro do flex column de .reader, sem mexer no HTML. */
+@media(max-width:900px){
+  .reader{padding-block:12px 40px}
+  .reader-heading,.reader-controls{display:contents}
+  .reader-heading>div:not(.reader-heading-actions){order:10;margin-bottom:8px}
+  .reader-heading h1{font-size:1.3rem;margin-top:2px;line-height:1.18}
+  .reader-heading .eyebrow{font-size:.68rem}
+  .book-cover{order:20}
+  .reader-layout{order:30}
+  .reader-end{order:30}
+  .page-controls{order:40;margin-top:16px}
+  .chapter-nav{order:40}
+  .voice-controls{order:50;margin-top:14px}
+  .voice-note{order:50;margin-top:10px}
+  .reader-heading-actions{order:60;margin-top:22px;padding-top:14px;border-top:1px solid var(--line)}
+  #fullscreen-status{order:60}
+}

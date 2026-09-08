@@ -55,6 +55,11 @@
   // Cartão de oferta no meio da história gratuita (cena 4), exibido pela primeira vez na sessão.
   window.addEventListener('pirilume-oferta-meio', () => evento('viu-oferta-meio'));
 
+  // Livro passou para o estado aberto (automático na chegada por link externo, ou clique manual
+  // em "Abrir o livro"), disparado por book.js uma única vez por sessão. Separa "chegou na
+  // página" de "viu a história de verdade".
+  window.addEventListener('pirilume-livro-aberto', () => evento('abriu-o-livro'));
+
   // Retorno do Mercado Pago (?compra= na URL), sem ler valor nem dado pessoal.
   if (new URLSearchParams(location.search).has('compra')) {
     evento('voltou-do-pagamento');
