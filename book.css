@@ -118,7 +118,11 @@
   #leitura-rapida{position:fixed;left:0;right:0;bottom:var(--lr-consent-offset,0px);z-index:50;display:flex;align-items:center;gap:10px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:var(--bg);background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-top:1px solid var(--line);box-shadow:0 -8px 24px #0006}
   #leitura-rapida #lr-ouvir{flex:1.4;min-height:48px}
   #leitura-rapida #lr-proxima{flex:1;min-height:48px}
-  #lr-contador{flex:0 0 auto;width:44px;text-align:center;font-size:.8rem;color:var(--muted)}
+  /* Em 360px "Próxima →" quebrava em duas linhas (seta cai pra segunda linha,
+     barra passa de 76px pra 101px de altura): trava numa linha e aperta um
+     pouco o espaço dos dois botões e do contador só aqui dentro. */
+  #leitura-rapida #lr-ouvir,#leitura-rapida #lr-proxima{white-space:nowrap;padding-left:10px;padding-right:10px}
+  #lr-contador{flex:0 0 auto;width:36px;text-align:center;font-size:.8rem;color:var(--muted)}
   /* Espaço extra no fim do conteúdo do leitor para a barra fixa nunca cobrir o
      último elemento (perguntas do fim, botão "Ler outra vez" etc.) ao rolar até lá. */
   .reader{padding-bottom:96px}

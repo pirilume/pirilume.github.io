@@ -57,8 +57,8 @@
 
   // Livro passou para o estado aberto (automático na chegada por link externo, ou clique manual
   // em "Abrir o livro"), disparado por book.js uma única vez por sessão. Separa "chegou na
-  // página" de "viu a história de verdade".
-  window.addEventListener('pirilume-livro-aberto', () => evento('abriu-o-livro'));
+  // página" de "viu a história de verdade"; o segundo evento abaixo recorta só a abertura por clique.
+  window.addEventListener('pirilume-livro-aberto', (event) => { evento('abriu-o-livro'); if (event.detail && event.detail.automatico === false) evento('abriu-o-livro-toque'); });
 
   // Retorno do Mercado Pago (?compra= na URL), sem ler valor nem dado pessoal.
   if (new URLSearchParams(location.search).has('compra')) {
