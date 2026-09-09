@@ -110,4 +110,21 @@
   .voice-note{order:50;margin-top:10px}
   .reader-heading-actions{order:60;margin-top:22px;padding-top:14px;border-top:1px solid var(--line)}
   #fullscreen-status{order:60}
+
+  /* Barra fixa "leitura rápida": as duas ações que importam (ouvir/avançar) sempre
+     à mão, sem rolar. z-index 50 fica abaixo da faixa de consentimento (z-index 60
+     em access.css) para nunca cobri-la; leitura-rapida.js empurra a barra para cima
+     da faixa (var(--lr-consent-offset)) enquanto ela existir no DOM. */
+  #leitura-rapida{position:fixed;left:0;right:0;bottom:var(--lr-consent-offset,0px);z-index:50;display:flex;align-items:center;gap:10px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:var(--bg);background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-top:1px solid var(--line);box-shadow:0 -8px 24px #0006}
+  #leitura-rapida #lr-ouvir{flex:1.4;min-height:48px}
+  #leitura-rapida #lr-proxima{flex:1;min-height:48px}
+  #lr-contador{flex:0 0 auto;width:44px;text-align:center;font-size:.8rem;color:var(--muted)}
+  /* Espaço extra no fim do conteúdo do leitor para a barra fixa nunca cobrir o
+     último elemento (perguntas do fim, botão "Ler outra vez" etc.) ao rolar até lá. */
+  .reader{padding-bottom:96px}
+}
+
+@media(min-width:901px){
+  /* No desktop os controles já ficam visíveis no topo: a barra fixa não existe ali. */
+  #leitura-rapida{display:none}
 }
