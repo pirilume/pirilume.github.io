@@ -64,7 +64,7 @@
     const title=document.createElement('h3'); title.textContent=book.title;
     const summary=document.createElement('p'); summary.textContent=book.summary;
     const state=document.createElement('small'); state.className='card-state';
-    state.textContent=book.chapters?.length ? '8 cenas · leitura e voz do aparelho · revisão' : 'Na coleção · lançamento em preparação';
+    state.textContent='8 cenas · narração gravada';
     card.append(friend,title,summary,state);
     // Só aparece em modo leitor (CSS): faz o mesmo que o botão do livro no painel #biblioteca,
     // buscando o livro e abrindo, mesmo se ainda não tiver sido carregado.

@@ -60,6 +60,12 @@
   // página" de "viu a história de verdade"; o segundo evento abaixo recorta só a abertura por clique.
   window.addEventListener('pirilume-livro-aberto', (event) => { evento('abriu-o-livro'); if (event.detail && event.detail.automatico === false) evento('abriu-o-livro-toque'); });
 
+  // Clicou em "Ouvir cena" e a narração começou (app.js garante uma vez por sessão).
+  window.addEventListener('pirilume-apertou-ouvir', () => evento('apertou-ouvir'));
+
+  // Narração natural (MP3) chegou ao fim da cena (app.js garante uma vez por cena por sessão).
+  window.addEventListener('pirilume-ouviu-cena-inteira', (e) => { const c = e.detail && e.detail.cena; if (c) evento('ouviu-inteira/cena-' + String(c).padStart(2, '0')); });
+
   // Retorno do Mercado Pago (?compra= na URL), sem ler valor nem dado pessoal.
   if (new URLSearchParams(location.search).has('compra')) {
     evento('voltou-do-pagamento');

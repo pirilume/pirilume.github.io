@@ -95,6 +95,10 @@
   // Curva de abandono (Tarefa 3) e oferta no meio da leitura (Tarefas 1-2): estado de sessão,
   // nunca reiniciado ao trocar de cena, só ao recarregar a página.
   const firedSceneEvents = new Set();
+  // Métrica: clique que INICIA a narração (não pause/retomar), uma vez por sessão.
+  let ouvirDisparado = false;
+  // Métrica: narração natural (MP3) que chegou ao fim da cena, uma vez por cena por sessão.
+  const firedListenedScenes = new Set();
   let offerMidNotified = false;
   let utteranceRef = null;
   let awaitingInteraction = false, nextNarrationTimer = null;
@@ -444,6 +448,12 @@
       if (paragraph >= paragraphs.length) {
         speaking = false; paused = false; speechUI();
         document.querySelectorAll('#story-text p').forEach(p => p.classList.remove('is-speaking'));
+        // Métrica: só narração natural (MP3), só a cena (não a descoberta), fim do último
+        // parágrafo — cada cena é um único MP3, então isso equivale ao fim do áudio da cena.
+        if (!readAnswer && engine === 'natural' && !firedListenedScenes.has(scene + 1)) {
+          firedListenedScenes.add(scene + 1);
+          window.dispatchEvent(new CustomEvent('pirilume-ouviu-cena-inteira', { detail: { cena: scene + 1 } }));
+        }
         if (readAnswer) {
           $('discovery-button').disabled = false;
           $('interaction-cue').textContent = 'Descoberta concluída. Virando a página…';
@@ -480,7 +490,14 @@
     readNext();
   }
   $('speak-button').addEventListener('click',() => {
-    if (!speaking) startSpeaking();
+    if (!speaking) {
+      startSpeaking();
+      // Métrica: só o clique que inicia a narração, uma vez por sessão (pause/retomar não conta).
+      if (!ouvirDisparado) {
+        ouvirDisparado = true;
+        window.dispatchEvent(new CustomEvent('pirilume-apertou-ouvir', { detail: { cena: scene + 1 } }));
+      }
+    }
     else if (paused) {
       if (engine === 'natural' && player) player.play(); else synth.resume();
       paused = false; speechUI();
