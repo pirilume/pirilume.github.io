@@ -1,7 +1,7 @@
 (() => {
   // Contagem anônima de visitas via GoatCounter: sem cookies, sem IP e sem dado
   // pessoal armazenado. Respeita "Não rastrear" do navegador não carregando nada.
-  if (navigator.doNotTrack === '1') return;
+  if (navigator.doNotTrack === '1' || ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) return;
 
   const SITE = 'pirilume';
 
@@ -31,13 +31,13 @@
   // Clique em "Comprar" (topo, seção da coleção, faixa/cartão durante a leitura ou cartão ao
   // final da história gratuita).
   document.addEventListener('click', (e) => {
-    const alvo = e.target.closest('#buy-collection, #buy-collection-hero, #end-upsell-buy, #offer-strip-buy, #offer-mid-buy');
+    const alvo = e.target.closest('#buy-collection, #buy-collection-hero, #end-upsell-buy, #offer-strip-buy, #offer-mid-buy, #account-buy');
     if (alvo) evento('clique-comprar');
   });
 
-  // Abertura da história gratuita.
+  // Versão 2: chegada à rota não significa abertura nem leitura.
   function checarHistoriaGratis() {
-    if (location.hash === '#livro/luzes') evento('abriu-historia-gratis');
+    if (['#livro/luzes', '#amostra', '#ler'].includes(location.hash)) evento('funil-v2/chegou-historia');
   }
   checarHistoriaGratis();
   window.addEventListener('hashchange', checarHistoriaGratis);
@@ -49,7 +49,7 @@
   // cena por sessão), para ler no GoatCounter em que cena as pessoas param de ler.
   window.addEventListener('pirilume-cena', (e) => {
     const cena = e.detail && e.detail.cena;
-    if (cena) evento('leitura/cena-' + String(cena).padStart(2, '0'));
+    if (cena) evento('leitura-v2/cena-visivel-' + String(cena).padStart(2, '0'));
   });
 
   // Cartão de oferta no meio da história gratuita (cena 4), exibido pela primeira vez na sessão.
@@ -58,7 +58,19 @@
   // Livro passou para o estado aberto (automático na chegada por link externo, ou clique manual
   // em "Abrir o livro"), disparado por book.js uma única vez por sessão. Separa "chegou na
   // página" de "viu a história de verdade"; o segundo evento abaixo recorta só a abertura por clique.
-  window.addEventListener('pirilume-livro-aberto', (event) => { evento('abriu-o-livro'); if (event.detail && event.detail.automatico === false) evento('abriu-o-livro-toque'); });
+  const aberturas = new Set();
+  window.addEventListener('pirilume-livro-aberto', (event) => {
+    if (!event.detail?.gratuito) return;
+    const modo = event.detail.automatico ? 'automatico' : 'toque';
+    if (aberturas.has(modo)) return;
+    aberturas.add(modo);
+    evento('funil-v2/livro-aberto-' + modo);
+  });
+
+  // Etapas reais do fluxo, sem e-mail, tokens ou identificadores pessoais.
+  for (const etapa of ['conta-aberta', 'auth-sucesso', 'auth-erro', 'checkout-iniciado', 'checkout-erro', 'compra-confirmada']) {
+    window.addEventListener('pirilume-' + etapa, () => evento('funil-v2/' + etapa));
+  }
 
   // Clicou em "Ouvir cena" e a narração começou (app.js garante uma vez por sessão).
   window.addEventListener('pirilume-apertou-ouvir', () => evento('apertou-ouvir'));
@@ -76,11 +88,11 @@
 // explícito (LGPD). Sem metaDatasetId configurado, nada aqui roda: nenhum aviso,
 // nenhum código da Meta é carregado (mesmo comportamento de antes desta mudança).
 (() => {
+  if (navigator.doNotTrack === '1' || ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) return;
   const metaDatasetId = (window.PIRILUME_METRICA && window.PIRILUME_METRICA.metaDatasetId) || '';
   if (!metaDatasetId) return;
 
   const CONSENT_KEY = 'pirilume.consent';
-  const CHECKOUT_KEY = 'pirilume.checkout-iniciado';
 
   function getConsent() {
     try { return localStorage.getItem(CONSENT_KEY); } catch { return null; }
@@ -102,35 +114,31 @@
     window.fbq('track', 'PageView');
   }
 
-  // ViewContent: abertura da história gratuita (mesmo gatilho do evento do GoatCounter).
+  let viuHistoria = false;
+  let viewContentEnviado = false;
   function checarHistoriaGratisMeta() {
-    if (location.hash === '#livro/luzes' && typeof window.fbq === 'function') {
+    if (viuHistoria && !viewContentEnviado && getConsent() === 'aceito' && typeof window.fbq === 'function') {
+      viewContentEnviado = true;
       window.fbq('track', 'ViewContent', { content_name: 'O bosque das pequenas luzes', content_type: 'product' });
     }
   }
-  checarHistoriaGratisMeta();
-  window.addEventListener('hashchange', checarHistoriaGratisMeta);
+  window.addEventListener('pirilume-livro-aberto', (event) => {
+    if (event.detail?.gratuito) viuHistoria = true;
+    checarHistoriaGratisMeta();
+  });
 
-  // InitiateCheckout + marca de checkout iniciado (necessária para o Purchase mais abaixo).
-  document.addEventListener('click', (e) => {
-    const alvo = e.target.closest('#buy-collection, #buy-collection-hero');
-    if (!alvo) return;
-    try { localStorage.setItem(CHECKOUT_KEY, '1'); } catch {}
-    if (typeof window.fbq === 'function') {
+  // Só conta quando o servidor criou um checkout válido, independentemente do botão de origem.
+  window.addEventListener('pirilume-checkout-iniciado', () => {
+    if (getConsent() === 'aceito' && typeof window.fbq === 'function') {
       window.fbq('track', 'InitiateCheckout', { value: 19.90, currency: 'BRL', content_ids: ['colecao-1'] });
     }
   });
 
-  // Purchase: só quando a biblioteca confirma acesso (pirilume-unlocked, disparado pelo
-  // access.js) E existe a marca de checkout iniciado. Nunca dispara só por ?compra= ou só
-  // por já estar liberado sem a marca. Some a marca depois, para não repetir a compra.
-  window.addEventListener('pirilume-unlocked', () => {
+  // O cliente exige aprovação do pedido atual pelo servidor, não apenas acesso à biblioteca.
+  window.addEventListener('pirilume-compra-confirmada', () => {
     if (getConsent() !== 'aceito') return;
-    let iniciouCheckout = false;
-    try { iniciouCheckout = Boolean(localStorage.getItem(CHECKOUT_KEY)); } catch {}
-    if (!iniciouCheckout || typeof window.fbq !== 'function') return;
+    if (typeof window.fbq !== 'function') return;
     window.fbq('track', 'Purchase', { value: 19.90, currency: 'BRL', content_ids: ['colecao-1'] });
-    try { localStorage.removeItem(CHECKOUT_KEY); } catch {}
   });
 
   function fecharAviso(aviso) {
@@ -157,6 +165,7 @@
     aviso.querySelector('.consent-accept').addEventListener('click', () => {
       setConsent('aceito');
       carregarPixel();
+      checarHistoriaGratisMeta();
       fecharAviso(aviso);
     });
     aviso.querySelector('.consent-essential').addEventListener('click', () => {

@@ -81,7 +81,10 @@
   // --- #lr-proxima espelha disabled de #next-button e delega o clique ---
   function sincronizarProxima() {
     if (!btnProxima || !next) return;
-    try { btnProxima.disabled = next.disabled; } catch (e) {}
+    try {
+      btnProxima.disabled = next.disabled;
+      btnProxima.textContent = /Conversar|Concluir/.test(next.textContent) ? 'Finalizar →' : 'Próxima →';
+    } catch (e) {}
   }
   if (btnProxima && next) {
     if (typeof MutationObserver !== 'undefined') {
@@ -89,6 +92,9 @@
         new MutationObserver(sincronizarProxima).observe(next, {
           attributes: true,
           attributeFilter: ['disabled'],
+          childList: true,
+          characterData: true,
+          subtree: true,
         });
       } catch (e) {}
     }

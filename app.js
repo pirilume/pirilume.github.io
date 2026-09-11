@@ -245,17 +245,22 @@
       const anchor = matchMedia('(max-width:900px)').matches ? $('reader-heading') : $('reader-view');
       anchor.scrollIntoView({behavior:'smooth',block:'start'});
     }
-    // Curva de abandono: só a história gratuita, só fora da amostra, uma vez por cena por
-    // sessão (voltar uma cena e avançar de novo não redispara — firedSceneEvents é o registro).
-    if (activeBook?.free && !sample) {
+    // O roteador ainda pode fechar a capa neste turno. Conte depois de o estado estabilizar.
+    requestAnimationFrame(recordVisibleScene);
+    updateStoryOffers();
+  }
+  function recordVisibleScene() {
+    const reader = $('reader-view');
+    if (activeBook?.free && !sample && !document.hidden && !reader.hidden && !reader.classList.contains('book-closed')) {
       const sceneNumber = scene + 1;
       if (!firedSceneEvents.has(sceneNumber)) {
         firedSceneEvents.add(sceneNumber);
         window.dispatchEvent(new CustomEvent('pirilume-cena', { detail: { cena: sceneNumber } }));
       }
     }
-    updateStoryOffers();
   }
+  window.addEventListener('pirilume-livro-aberto', recordVisibleScene);
+  document.addEventListener('visibilitychange', recordVisibleScene);
   // Convite ao final da leitura: história gratuita oferece a coleção paga; livro pago abre o
   // próximo (ordem de window.PIRILUME_BOOKS, pulando o gratuito) ou volta à biblioteca no último.
   function updateEndUpsell() {

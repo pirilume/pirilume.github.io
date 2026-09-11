@@ -28,10 +28,7 @@
   const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   let opening = null, leafAnimation = null, leaf = null;
   let previousIndex = 0, previousPage = null, previousArt = null;
-  // 'pirilume-livro-aberto' mede quem passou da capa de verdade (Instrumentação): dispara uma
-  // única vez por sessão, tanto na abertura automática (chegada por link externo) quanto no
-  // clique manual em #open-book.
-  let livroAbertoDisparado = false;
+  // A abertura é emitida por transição; cada consumidor deduplica seu próprio indicador.
   const art = document.getElementById('reader-art');
   function fitArt() {
     const index = sceneIndex();
@@ -109,10 +106,9 @@
       spread.setAttribute('tabindex', '-1');
       spread.focus({preventScroll: true});
       reader.scrollIntoView({block:'start',behavior:reduced() ? 'auto' : 'smooth'});
-      if (!livroAbertoDisparado) {
-        livroAbertoDisparado = true;
-        window.dispatchEvent(new CustomEvent('pirilume-livro-aberto', {detail: {automatico}}));
-      }
+      window.dispatchEvent(new CustomEvent('pirilume-livro-aberto', {detail: {
+        automatico, gratuito: Boolean(window.PIRILUME_ACTIVE_BOOK?.free)
+      }}));
     }
   }
   open.addEventListener('click', async () => {

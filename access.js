@@ -1,7 +1,7 @@
 (() => {
  const cfg=window.PIRILUME_ACCESS||{};
  const configured=Boolean(cfg.supabaseUrl && cfg.anonKey);
- let session=null, pending=false, refreshTimer, pollTimer, readerScrolled=false;
+ let session=null, pending=false, refreshTimer, pollTimer, readerScrolled=false, pollCount=0;
  const section=document.createElement('section'); section.id='biblioteca'; section.className='shell account-panel';
  section.innerHTML='<p class="eyebrow">SEU CANTINHO NO BOSQUE</p><h2>Minha biblioteca</h2><p>Use o e-mail do responsável para acessar sua coleção.</p><form id="account-form"><label>E-mail<input name="email" type="email" autocomplete="email" required></label><label>Senha<input name="password" type="password" autocomplete="current-password" minlength="8" required></label><div class="account-actions"><button class="button primary" name="action" value="login">Entrar</button><button class="button secondary" name="action" value="signup">Criar conta</button><button class="text-link" type="button" id="recover-account">Esqueci a senha</button></div></form><div id="account-signed" hidden><p id="account-email"></p><div class="account-actions"><button id="account-refresh" class="button secondary">Verificar minha coleção</button><button id="account-buy" class="button primary">Comprar coleção · R$ 19,90</button><button id="account-logout" class="text-link">Sair</button></div></div><p id="account-status" role="status" aria-live="polite"></p><div id="owned-books" class="account-books"></div>';
  document.getElementById('home-view').append(section);
@@ -10,13 +10,30 @@
  const say=text=>{$('account-status').textContent=text;};
  const mode=cfg.mode==='live'?'':'Teste: nenhum pagamento real deve ser feito. ';
  const STORAGE_KEY='pirilume.session';
+ const INTENT_KEY='pirilume.buy-intent', ORDER_KEY='pirilume.pending-order';
+ const memoryState=new Map();
+ const emit=name=>window.dispatchEvent(new CustomEvent('pirilume-'+name));
+ function readLocal(key){try{return JSON.parse(localStorage.getItem(key)||'null')??memoryState.get(key)??null;}catch{return memoryState.get(key)??null;}}
+ function writeLocal(key,value){memoryState.set(key,value);try{if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,JSON.stringify(value));}catch{}}
+ function wantsCheckout(){const at=readLocal(INTENT_KEY);return typeof at==='number' && Date.now()-at<2*3600000;}
+ function pendingOrder(){const order=readLocal(ORDER_KEY);return order && /^[0-9a-f-]{36}$/i.test(order.id) && Date.now()-order.at<7*86400000 ? order.id : null;}
+ function showPurchaseIntent(){
+   section.querySelector('h2').textContent='Sua coleção está quase pronta';
+   section.querySelector('h2 + p').textContent='5 histórias narradas · R$ 19,90 · pagamento único. Crie seu acesso ou entre: o próximo passo é o pagamento pelo Mercado Pago.';
+   const form=$('account-form');
+   form.querySelector('[value="signup"]').textContent='Criar conta e ir ao pagamento';
+   form.querySelector('[value="signup"]').className='button primary';
+   form.querySelector('[value="login"]').textContent='Já tenho conta · continuar';
+   form.querySelector('[value="login"]').className='button secondary';
+   form.querySelector('.account-actions').prepend(form.querySelector('[value="signup"]'));
+ }
  function saveSession(data){try{if(data?.access_token&&data?.refresh_token){localStorage.setItem(STORAGE_KEY,JSON.stringify({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Date.now()+((data.expires_in||3600)*1000),user:{id:data.user?.id,email:data.user?.email}}));}else{localStorage.removeItem(STORAGE_KEY);}}catch{}}
  function loadStoredSession(){try{const raw=localStorage.getItem(STORAGE_KEY);return raw?JSON.parse(raw):null;}catch{return null;}}
  function clearStoredSession(){try{localStorage.removeItem(STORAGE_KEY);}catch{}}
  async function auth(path,body,token) {
    const response=await fetch(cfg.supabaseUrl+'/auth/v1/'+path,{method:'POST',headers:{apikey:cfg.anonKey,'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(body)});
    const data=await response.json();
-   if(!response.ok) throw Error(path.startsWith('token')?'Não foi possível entrar. Confira seus dados ou recupere a senha.':'Não foi possível concluir. Confira os dados e tente novamente.');
+   if(!response.ok) throw Error(path.startsWith('token')?'Não foi possível entrar. Confira seus dados ou recupere a senha.':path==='signup'?'Não foi possível criar a conta. Se já usou este e-mail, entre na sua conta ou recupere a senha.':'Não foi possível concluir. Confira os dados e tente novamente.');
    return data;
  }
  function setSession(data) {
@@ -43,32 +60,61 @@
  }
  window.PIRILUME_OPEN_BOOK=openBook;
  async function library() {
-   const data=await api('/library'); $('owned-books').replaceChildren();
+   const order=pendingOrder();
+   const data=await api('/library'+(order?'?order='+encodeURIComponent(order):'')); $('owned-books').replaceChildren();
    $('account-buy').hidden=data.unlocked;
    setReaderMode(data.unlocked);
    if(data.unlocked) window.dispatchEvent(new CustomEvent('pirilume-unlocked'));
+   if(order && data.unlocked && data.orderApproved===true){writeLocal(ORDER_KEY,null);emit('compra-confirmada');}
    const mp={test_user:'Mercado Pago: vendedor de teste OK. ',production:'Mercado Pago: token de CONTA REAL. Compra de teste bloqueada até trocar pelo vendedor de teste. ',test_credentials:'Mercado Pago: credenciais TEST- (sandbox, sem webhook automático). ',invalid:'Mercado Pago: token não reconhecido. ',unknown:'Mercado Pago: não foi possível verificar o token. ',missing:'Mercado Pago: token ausente. '}[data.mpAccount]||'';
-   say(data.unlocked?'Sua coleção está liberada. Escolha uma história.':mode+mp+'Sua coleção ainda não foi liberada. Se acabou de pagar, aguarde a confirmação e verifique novamente.');
+   say(data.unlocked?'Sua coleção está liberada. Escolha uma história.':data.reconciliationPending?'Não conseguimos consultar o pagamento agora. Se você já pagou, não pague novamente: use “Verificar minha coleção” em instantes.':order?mode+mp+'Aguardando confirmação do pagamento. Se já pagou, não precisa pagar novamente.':mode+'Sua conta está pronta. Você pode comprar as cinco histórias por R$ 19,90.');
    if(data.unlocked) for(const book of window.PIRILUME_BOOKS.filter(b=>!b.free)) {
      const button=document.createElement('button'); button.className='button secondary'; button.textContent=book.title;
      button.onclick=()=>openBook(book);
      $('owned-books').append(button);
    }
    clearTimeout(pollTimer);
-   if(!data.unlocked && new URLSearchParams(location.search).has('compra')) pollTimer=setTimeout(()=>run(library),10000);
+   if(!data.unlocked && order && pollCount++<12) pollTimer=setTimeout(()=>run(library),10000);
    return data.unlocked;
  }
  async function run(fn) {if(pending)return;pending=true;section.setAttribute('aria-busy','true');try{await fn();}catch(e){say(e.message);}finally{pending=false;section.removeAttribute('aria-busy');}}
- async function buy() {if(!session){location.hash='#biblioteca';say('Entre ou crie sua conta para continuar.');$('account-form').elements.email.focus();return;} await run(async()=>{say(mode+'Preparando pagamento…');const result=await api('/checkout','POST');if(result.alreadyOwned){await library();return;}const url=new URL(result.checkoutUrl);if(url.protocol!=='https:'||!['www.mercadopago.com.br','sandbox.mercadopago.com.br'].includes(url.hostname))throw Error('Endereço de pagamento inválido.');location.assign(url.href);});}
+ async function prepareCheckout() {
+   try {
+     say(mode+'Abrindo o pagamento seguro no Mercado Pago…');
+     const result=await api('/checkout','POST');
+     if(result.alreadyOwned){writeLocal(INTENT_KEY,null);await library();return;}
+     const url=new URL(result.checkoutUrl);
+     if(url.protocol!=='https:'||!['www.mercadopago.com.br','sandbox.mercadopago.com.br'].includes(url.hostname))throw Error('Endereço de pagamento inválido.');
+     if(result.orderId)writeLocal(ORDER_KEY,{id:result.orderId,at:Date.now()});
+     writeLocal(INTENT_KEY,null);
+     emit('checkout-iniciado');
+     location.assign(url.href);
+   } catch(error){emit('checkout-erro');location.hash='#biblioteca';throw error;}
+ }
+ async function buy() {
+   if(!configured){location.hash='#biblioteca';say('O pagamento está indisponível neste momento. Tente novamente em instantes.');return;}
+   writeLocal(INTENT_KEY,Date.now());
+   if(!session){showPurchaseIntent();emit('conta-aberta');location.hash='#biblioteca';say('Use o e-mail do responsável e uma senha com pelo menos 8 caracteres.');$('account-form').elements.email.focus();return;}
+   await run(prepareCheckout);
+ }
  function logout(){clearTimeout(refreshTimer);clearTimeout(pollTimer);setSession(null);document.body.classList.remove('modo-leitor');$('owned-books').replaceChildren();for(const b of window.PIRILUME_BOOKS.filter(b=>!b.free)){delete b.chapters;delete b.cover;}[...$('book-picker').options].filter(o=>o.value!=='luzes').forEach(o=>o.remove());location.hash='#biblioteca';say('Você saiu da sua conta.');}
  async function restoreSession(){const stored=loadStoredSession();if(!stored?.refresh_token)return;document.body.classList.add('modo-leitor');try{setSession(await auth('token?grant_type=refresh_token',{refresh_token:stored.refresh_token}));await library();}catch{setSession(null);document.body.classList.remove('modo-leitor');say('Sua sessão expirou. Entre novamente.');}}
- $('account-form').onsubmit=e=>{e.preventDefault();run(async()=>{const form=e.currentTarget;const body={email:form.elements.email.value.trim(),password:form.elements.password.value};say('Aguarde…');const signup=e.submitter?.value==='signup';const result=await auth(signup?'signup':'token?grant_type=password',body);form.elements.password.value='';if(!result.access_token){say('Confira seu e-mail para confirmar a conta. Depois, volte aqui para entrar.');return;}setSession(result);await library();});};
+ $('account-form').onsubmit=e=>{e.preventDefault();const form=e.currentTarget;const signup=e.submitter?.value==='signup';run(async()=>{
+   const body={email:form.elements.email.value.trim(),password:form.elements.password.value};say('Aguarde…');
+   let result;try{result=await auth(signup?'signup':'token?grant_type=password',body);}catch(error){emit('auth-erro');throw error;}
+   form.elements.password.value='';
+   if(!result.access_token){say('Confira seu e-mail para confirmar a conta. Depois, volte aqui para entrar.');return;}
+   setSession(result);emit('auth-sucesso');
+   if(wantsCheckout())await prepareCheckout();else await library();
+ });};
  $('recover-account').onclick=()=>run(async()=>{const email=$('account-form').elements.email.value.trim();if(!email)throw Error('Preencha seu e-mail para recuperar a senha.');await auth('recover?redirect_to='+encodeURIComponent(location.origin+location.pathname+'#biblioteca'),{email});say('Se houver uma conta, você receberá as instruções por e-mail.');});
- $('account-refresh').onclick=()=>run(async()=>{say(mode+'Verificando com o Mercado Pago…');await library();}); $('account-buy').onclick=buy;
+ $('account-refresh').onclick=()=>run(async()=>{pollCount=0;say(mode+'Verificando com o Mercado Pago…');await library();}); $('account-buy').onclick=buy;
  $('account-logout').onclick=()=>run(async()=>{try{await auth('logout',{},session?.access_token);}finally{logout();}});
  window.PIRILUME_BUY=buy;
  function wirePurchaseButton(id){const button=$(id);if(!button)return;button.disabled=!configured;button.textContent=cfg.mode==='live'?'Comprar as 5 histórias por R$ 19,90':'Experimentar compra de teste';button.onclick=buy;}
  ['buy-collection','buy-collection-hero'].forEach(wirePurchaseButton);
+ ['offer-strip-buy','offer-mid-buy','end-upsell-buy'].forEach(id=>{const button=$(id);if(button)button.textContent='Comprar 5 histórias · R$ 19,90';});
+ if(wantsCheckout())showPurchaseIntent();
  if(!configured){section.querySelectorAll('button,input').forEach(el=>el.disabled=true);say('Estamos preparando o acesso à coleção. A história gratuita já está disponível.');}
  else say(mode+'Entre para acessar sua biblioteca.');
  if(location.hash==='#biblioteca') section.scrollIntoView({block:'start'});
