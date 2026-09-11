@@ -29,3 +29,5 @@
    o título herdaria essa cor escura sobre o fundo escuro do cartão e ficaria ilegível. */
 #offer-mid{margin-top:20px;color:var(--ink)}
 @media(max-width:700px){#offer-strip{font-size:.9rem;padding-top:12px}}
+/* Chegada direta em #livro/...: esconde a home antes do primeiro paint (script inline no head), pra não baixar o hero. */
+.chegada-livro #home-view{display:none}

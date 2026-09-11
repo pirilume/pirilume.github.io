@@ -132,7 +132,13 @@
     spread.animate([{opacity:0,transform:'scale(.95)'},{opacity:1,transform:'scale(1)'}],{duration:350,easing:'ease-out'});
   });
   close.addEventListener('click', () => { setOpen(false); open.focus(); });
-  window.addEventListener('hashchange', () => { setOpen(false); syncVoices(); });
+  window.addEventListener('hashchange', () => {
+    setOpen(false); syncVoices();
+    // chegada-livro (ver <head>) só existe pro primeiro paint de quem entrou direto em
+    // #livro/...; em qualquer outra rota tira a classe, senão a regra em styles.css deixaria
+    // #home-view escondida pra sempre, mesmo com home-view.hidden voltando a false no app.js.
+    if (!location.hash.startsWith('#livro/')) document.documentElement.classList.remove('chegada-livro');
+  });
   new MutationObserver(() => {
     const index = sceneIndex();
     updateLights(index);

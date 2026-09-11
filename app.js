@@ -558,6 +558,9 @@
     const reading = hash === '#ler' || hash === '#amostra' || Boolean(requested && hash.startsWith('#livro/'));
     document.title = reading ? 'Pirilume · ' + (requested?.title || 'O bosque das pequenas luzes') : 'Pirilume · Nino e os amigos do bosque';
     $('home-view').hidden = reading; $('reader-view').hidden = !reading;
+    // chegada-livro (script no <head>) esconde a home antes do primeiro paint; aqui o router
+    // assume: some em qualquer rota que mostre a home, inclusive #livro/<id inexistente>.
+    document.documentElement.classList.toggle('chegada-livro', reading);
     stopSpeech();
     if (reading) {
       activeBook = requested || window.PIRILUME_BOOKS?.[0];
