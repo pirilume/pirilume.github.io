@@ -4,7 +4,7 @@
     friend:'Nino & Lume', summary:'Uma estrela perdida, uma raposinha e pequenas ajudas pelo caminho.',
     free:true, language:'pt-BR', chapters:window.PIRILUME_STORY,
     questions:['Quem ajudou Nino, mesmo sem carregar a estrela?','Você lembra de uma vez em que pediu ajuda?','Que pequena ajuda podemos oferecer amanhã?'],
-    cover:'assets/scene-sheet-a-expanded.png', columns:2, rows:2
+    cover:'assets/scene-sheet-a-expanded.webp', columns:2, rows:2
   };
   window.PIRILUME_BOOKS = [free,...(window.PIRILUME_COLLECTION || [])];
   window.PIRILUME_ACTIVE_BOOK = free;
@@ -48,6 +48,16 @@
   })().catch(() => {});
   const select = document.getElementById('book-picker');
   const grid = document.getElementById('collection-books');
+  // Capa dos livros pagos só baixa perto de aparecer na tela: guarda a URL em data-cover e um
+  // único observer troca pro background quando o card chega perto da viewport (margem generosa
+  // evita "flash" de card vazio). Sem IntersectionObserver (aparelho antigo), define na hora.
+  const coverObserver = 'IntersectionObserver' in window ? new IntersectionObserver((entries, observer) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      entry.target.style.backgroundImage = `url('${entry.target.dataset.cover}')`;
+      observer.unobserve(entry.target);
+    });
+  }, { rootMargin: '400px 0px' }) : null;
   window.PIRILUME_BOOKS.forEach(book => {
     if (book.chapters?.length && select) {
       const option = document.createElement('option');
@@ -58,7 +68,8 @@
     const card=document.createElement('article'); card.className='collection-card';
     const art=document.createElement('div'); art.className='collection-cover'; art.setAttribute('role','img');
     art.setAttribute('aria-label',book.coverAlt || book.subtitle);
-    art.style.backgroundImage=`url('${book.cover}')`;
+    if (coverObserver) { art.dataset.cover=book.cover; coverObserver.observe(art); }
+    else art.style.backgroundImage=`url('${book.cover}')`;
     art.style.backgroundSize=`${book.columns*100}% ${book.rows*100}%`;
     const friend=document.createElement('p'); friend.className='eyebrow'; friend.textContent=book.friend;
     const title=document.createElement('h3'); title.textContent=book.title;

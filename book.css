@@ -53,8 +53,8 @@
 @keyframes interaction-invite{0%,100%{box-shadow:0 0 0 3px #d7aa5030}50%{box-shadow:0 0 0 8px #d7aa5060}}
 @media(prefers-reduced-motion:reduce){.discovery-button[data-awaiting="true"]{animation:none}}
 .reader-layout>.reader-visual{aspect-ratio:1;min-height:0;align-self:start}
-.reader-visual .art-a{background-image:url('assets/scene-sheet-a-expanded.png')}
-.reader-visual .art-b{background-image:url('assets/scene-sheet-b-expanded.png')}
+.reader-visual .art-a{background-image:url('assets/scene-sheet-a-expanded.webp')}
+.reader-visual .art-b{background-image:url('assets/scene-sheet-b-expanded.webp')}
 @media(min-width:901px){
   .reader-layout{container-type:inline-size}
   .reader-layout>.reader-page{height:50cqw;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}

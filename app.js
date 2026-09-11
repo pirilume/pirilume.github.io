@@ -210,7 +210,7 @@
     scene = Math.max(0, Math.min(index, limit - 1));
     const chapter = story[scene];
     $('reader-art').className = chapter.image ? 'scene-art' : 'scene-art art-' + chapter.sheet + ' quadrant-' + chapter.quadrant;
-    const image = chapter.image || (chapter.sheet === 'b' ? 'assets/scene-sheet-b-expanded.png' : 'assets/scene-sheet-a-expanded.png');
+    const image = chapter.image || (chapter.sheet === 'b' ? 'assets/scene-sheet-b-expanded.webp' : 'assets/scene-sheet-a-expanded.webp');
     $('reader-art').style.backgroundImage = `url('${image}')`;
     $('reader-art').dataset.columns = chapter.columns || 2;
     $('reader-art').dataset.rows = chapter.rows || 2;
