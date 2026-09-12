@@ -6,12 +6,18 @@
   card.replaceChildren();
   const label = document.createElement('p'); label.className = 'eyebrow'; label.textContent = 'COLEÇÃO · 5 HISTÓRIAS INÉDITAS';
   const title = document.createElement('h2'); title.textContent = 'Nino e os amigos do bosque';
-  const anchor = document.createElement('p'); anchor.style.color = 'var(--muted)'; anchor.style.textAlign = 'left';
-  const anchorPrice = document.createElement('span'); anchorPrice.textContent = format(config.plannedRegularPriceBRL);
-  const anchorLabel = document.createElement('span'); anchorLabel.style.fontSize = '0.9rem'; anchorLabel.style.color = 'var(--muted)'; anchorLabel.textContent = ' · valor após o lançamento';
-  anchor.append(anchorPrice, anchorLabel);
+  // Âncora ("valor após o lançamento") só faz sentido quando existe um preço futuro maior
+  // de verdade; sem isso, "Preço de lançamento" prometeria um aumento que não está decidido.
+  const temAncora = Number(config.plannedRegularPriceBRL) > Number(config.launchPriceBRL);
+  let anchor = null;
+  if (temAncora) {
+    anchor = document.createElement('p'); anchor.style.color = 'var(--muted)'; anchor.style.textAlign = 'left';
+    const anchorPrice = document.createElement('span'); anchorPrice.textContent = format(config.plannedRegularPriceBRL);
+    const anchorLabel = document.createElement('span'); anchorLabel.style.fontSize = '0.9rem'; anchorLabel.style.color = 'var(--muted)'; anchorLabel.textContent = ' · valor após o lançamento';
+    anchor.append(anchorPrice, anchorLabel);
+  }
   const price = document.createElement('p'); price.className = 'price'; price.style.fontSize = '3rem'; price.style.color = 'var(--gold)'; price.style.marginTop = '6px'; price.textContent = format(config.launchPriceBRL);
-  const terms = document.createElement('p'); terms.textContent = 'Preço de lançamento · pagamento único';
+  const terms = document.createElement('p'); terms.textContent = temAncora ? 'Preço de lançamento · pagamento único' : 'Pagamento único';
   const trust = document.createElement('p'); trust.className = 'micro'; trust.textContent = 'Pagamento pelo Mercado Pago · Pix ou cartão · acesso imediato na sua conta, no celular e no computador';
   const buy = document.createElement('button'); buy.className = 'button primary'; buy.id = 'buy-collection';
   buy.textContent = 'Comprar as 5 histórias por ' + format(config.launchPriceBRL);
@@ -21,5 +27,5 @@
   refundLink.style.display = 'inline'; refundLink.style.margin = '0'; refundLink.style.fontSize = 'inherit';
   refund.append(refundLink);
   const sample = document.createElement('a'); sample.className = 'text-link'; sample.href = '#amostra'; sample.textContent = 'Ler a história completa grátis →';
-  card.append(label, title, anchor, price, terms, trust, buy, refund, sample);
+  card.append(label, title, ...(anchor ? [anchor] : []), price, terms, trust, buy, refund, sample);
 })();

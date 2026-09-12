@@ -588,7 +588,9 @@
       if (synth) populateVoices(true);
       renderScene(0);
       $('reader-view').scrollIntoView({block:'start'});
-    } else if (hash === '#oferta') $('offer-section').scrollIntoView({block:'start'});
+    // Anúncio promete preço e botão: pousa no cartão de preço, não no topo da seção
+    // (que começa com texto de descrição e deixaria o cartão fora da tela).
+    } else if (hash === '#oferta') ($('offer-section').querySelector('.price-card') || $('offer-section')).scrollIntoView({block:'start'});
     else if (hash === '#colecao') $('colecao').scrollIntoView({block:'start'});
     else if (hash !== '#main') window.scrollTo({top:0});
   }
@@ -604,4 +606,13 @@
     if (document.hidden && audioPreview) audioPreview.pause();
   });
   route();
+  // checkout.js roda depois deste script e troca o conteúdo do cartão de preço
+  // (#buy-collection no lugar de #buy-collection-hero), mudando a altura final do cartão.
+  // Se a chegada for direta em #oferta, o scroll acima já rolou pro layout antigo; corrige
+  // uma única vez, sem loop nem observer, depois que o navegador termina de reajustar o layout.
+  if (location.hash === '#oferta') {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (location.hash === '#oferta') ($('offer-section').querySelector('.price-card') || $('offer-section')).scrollIntoView({block:'start'});
+    }));
+  }
 })();

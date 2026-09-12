@@ -42,6 +42,36 @@
   checarHistoriaGratis();
   window.addEventListener('hashchange', checarHistoriaGratis);
 
+  // Chegada à oferta por link direto (#oferta, ex.: anúncio), uma vez por sessão. Não conta
+  // como abertura nem leitura da história.
+  let chegouOferta = false;
+  function checarChegadaOferta() {
+    if (chegouOferta) return;
+    if (location.hash === '#oferta') { chegouOferta = true; evento('funil-v2/chegou-oferta'); }
+  }
+  checarChegadaOferta();
+  window.addEventListener('hashchange', checarChegadaOferta);
+
+  // Oferta visível na tela, uma vez por sessão, seja por chegada direta (#oferta) ou por rolagem
+  // até a seção na home. Observa o cartão de preço (contém o botão de compra), não a seção
+  // inteira, pra não contar quem só passou o olho pelo texto de cima. Sem IntersectionObserver
+  // no navegador, não conta (sem fallback por scroll).
+  let ofertaVisivel = false;
+  if (typeof IntersectionObserver === 'function') {
+    const cartaoOferta = document.querySelector('#offer-section .price-card');
+    if (cartaoOferta) {
+      const observadorOferta = new IntersectionObserver((entradas) => {
+        if (ofertaVisivel) return;
+        const visivel = entradas.some(entrada => entrada.isIntersecting && entrada.intersectionRatio >= 0.5);
+        if (!visivel) return;
+        ofertaVisivel = true;
+        evento('funil-v2/oferta-visivel');
+        observadorOferta.disconnect();
+      }, { threshold: 0.5 });
+      observadorOferta.observe(cartaoOferta);
+    }
+  }
+
   // Cartão de convite à coleção, exibido ao final da história gratuita (app.js dispara).
   window.addEventListener('pirilume-fim-historia-gratis', () => evento('terminou-historia-gratis'));
 
