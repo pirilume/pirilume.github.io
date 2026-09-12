@@ -130,15 +130,17 @@
   // Só conta quando o servidor criou um checkout válido, independentemente do botão de origem.
   window.addEventListener('pirilume-checkout-iniciado', () => {
     if (getConsent() === 'aceito' && typeof window.fbq === 'function') {
-      window.fbq('track', 'InitiateCheckout', { value: 19.90, currency: 'BRL', content_ids: ['colecao-1'] });
+      window.fbq('track', 'InitiateCheckout', { value: 9.90, currency: 'BRL', content_ids: ['colecao-1'] });
     }
   });
 
   // O cliente exige aprovação do pedido atual pelo servidor, não apenas acesso à biblioteca.
-  window.addEventListener('pirilume-compra-confirmada', () => {
+  window.addEventListener('pirilume-compra-confirmada', (event) => {
     if (getConsent() !== 'aceito') return;
     if (typeof window.fbq !== 'function') return;
-    window.fbq('track', 'Purchase', { value: 19.90, currency: 'BRL', content_ids: ['colecao-1'] });
+    const amount=Number(event.detail?.amount);
+    if (![9.90,19.90].includes(amount)) return;
+    window.fbq('track', 'Purchase', { value: amount, currency: 'BRL', content_ids: ['colecao-1'] });
   });
 
   function fecharAviso(aviso) {

@@ -3,7 +3,7 @@
  const configured=Boolean(cfg.supabaseUrl && cfg.anonKey);
  let session=null, pending=false, refreshTimer, pollTimer, readerScrolled=false, pollCount=0;
  const section=document.createElement('section'); section.id='biblioteca'; section.className='shell account-panel';
- section.innerHTML='<p class="eyebrow">SEU CANTINHO NO BOSQUE</p><h2>Minha biblioteca</h2><p>Use o e-mail do responsável para acessar sua coleção.</p><form id="account-form"><label>E-mail<input name="email" type="email" autocomplete="email" required></label><label>Senha<input name="password" type="password" autocomplete="current-password" minlength="8" required></label><div class="account-actions"><button class="button primary" name="action" value="login">Entrar</button><button class="button secondary" name="action" value="signup">Criar conta</button><button class="text-link" type="button" id="recover-account">Esqueci a senha</button></div></form><div id="account-signed" hidden><p id="account-email"></p><div class="account-actions"><button id="account-refresh" class="button secondary">Verificar minha coleção</button><button id="account-buy" class="button primary">Comprar coleção · R$ 19,90</button><button id="account-logout" class="text-link">Sair</button></div></div><p id="account-status" role="status" aria-live="polite"></p><div id="owned-books" class="account-books"></div>';
+ section.innerHTML='<p class="eyebrow">SEU CANTINHO NO BOSQUE</p><h2>Minha biblioteca</h2><p>Use o e-mail do responsável para acessar sua coleção.</p><form id="account-form"><label>E-mail<input name="email" type="email" autocomplete="email" required></label><label>Senha<input name="password" type="password" autocomplete="current-password" minlength="8" required></label><div class="account-actions"><button class="button primary" name="action" value="login">Entrar</button><button class="button secondary" name="action" value="signup">Criar conta</button><button class="text-link" type="button" id="recover-account">Esqueci a senha</button></div></form><div id="account-signed" hidden><p id="account-email"></p><div class="account-actions"><button id="account-refresh" class="button secondary">Verificar minha coleção</button><button id="account-buy" class="button primary">Comprar coleção · R$ 9,90</button><button id="account-logout" class="text-link">Sair</button></div></div><p id="account-status" role="status" aria-live="polite"></p><div id="owned-books" class="account-books"></div>';
  document.getElementById('home-view').append(section);
  const nav=document.querySelector('.site-header nav'); const link=document.createElement('a'); link.href='#biblioteca'; link.textContent='Minha biblioteca'; nav?.append(link);
  const $=id=>document.getElementById(id);
@@ -12,14 +12,14 @@
  const STORAGE_KEY='pirilume.session';
  const INTENT_KEY='pirilume.buy-intent', ORDER_KEY='pirilume.pending-order';
  const memoryState=new Map();
- const emit=name=>window.dispatchEvent(new CustomEvent('pirilume-'+name));
+ const emit=(name,detail)=>window.dispatchEvent(new CustomEvent('pirilume-'+name,{detail}));
  function readLocal(key){try{return JSON.parse(localStorage.getItem(key)||'null')??memoryState.get(key)??null;}catch{return memoryState.get(key)??null;}}
  function writeLocal(key,value){memoryState.set(key,value);try{if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,JSON.stringify(value));}catch{}}
  function wantsCheckout(){const at=readLocal(INTENT_KEY);return typeof at==='number' && Date.now()-at<2*3600000;}
  function pendingOrder(){const order=readLocal(ORDER_KEY);return order && /^[0-9a-f-]{36}$/i.test(order.id) && Date.now()-order.at<7*86400000 ? order.id : null;}
  function showPurchaseIntent(){
    section.querySelector('h2').textContent='Sua coleção está quase pronta';
-   section.querySelector('h2 + p').textContent='5 histórias narradas · R$ 19,90 · pagamento único. Crie seu acesso ou entre: o próximo passo é o pagamento pelo Mercado Pago.';
+   section.querySelector('h2 + p').textContent='5 histórias narradas · R$ 9,90 · pagamento único. Crie seu acesso ou entre: o próximo passo é o pagamento pelo Mercado Pago.';
    const form=$('account-form');
    form.querySelector('[value="signup"]').textContent='Criar conta e ir ao pagamento';
    form.querySelector('[value="signup"]').className='button primary';
@@ -65,9 +65,9 @@
    $('account-buy').hidden=data.unlocked;
    setReaderMode(data.unlocked);
    if(data.unlocked) window.dispatchEvent(new CustomEvent('pirilume-unlocked'));
-   if(order && data.unlocked && data.orderApproved===true){writeLocal(ORDER_KEY,null);emit('compra-confirmada');}
+   if(order && data.unlocked && data.orderApproved===true){writeLocal(ORDER_KEY,null);emit('compra-confirmada',{amount:data.orderAmount});}
    const mp={test_user:'Mercado Pago: vendedor de teste OK. ',production:'Mercado Pago: token de CONTA REAL. Compra de teste bloqueada até trocar pelo vendedor de teste. ',test_credentials:'Mercado Pago: credenciais TEST- (sandbox, sem webhook automático). ',invalid:'Mercado Pago: token não reconhecido. ',unknown:'Mercado Pago: não foi possível verificar o token. ',missing:'Mercado Pago: token ausente. '}[data.mpAccount]||'';
-   say(data.unlocked?'Sua coleção está liberada. Escolha uma história.':data.reconciliationPending?'Não conseguimos consultar o pagamento agora. Se você já pagou, não pague novamente: use “Verificar minha coleção” em instantes.':order?mode+mp+'Aguardando confirmação do pagamento. Se já pagou, não precisa pagar novamente.':mode+'Sua conta está pronta. Você pode comprar as cinco histórias por R$ 19,90.');
+   say(data.unlocked?'Sua coleção está liberada. Escolha uma história.':data.reconciliationPending?'Não conseguimos consultar o pagamento agora. Se você já pagou, não pague novamente: use “Verificar minha coleção” em instantes.':order?mode+mp+'Aguardando confirmação do pagamento. Se já pagou, não precisa pagar novamente.':mode+'Sua conta está pronta. Você pode comprar as cinco histórias por R$ 9,90.');
    if(data.unlocked) for(const book of window.PIRILUME_BOOKS.filter(b=>!b.free)) {
      const button=document.createElement('button'); button.className='button secondary'; button.textContent=book.title;
      button.onclick=()=>openBook(book);
@@ -111,9 +111,9 @@
  $('account-refresh').onclick=()=>run(async()=>{pollCount=0;say(mode+'Verificando com o Mercado Pago…');await library();}); $('account-buy').onclick=buy;
  $('account-logout').onclick=()=>run(async()=>{try{await auth('logout',{},session?.access_token);}finally{logout();}});
  window.PIRILUME_BUY=buy;
- function wirePurchaseButton(id){const button=$(id);if(!button)return;button.disabled=!configured;button.textContent=cfg.mode==='live'?'Comprar as 5 histórias por R$ 19,90':'Experimentar compra de teste';button.onclick=buy;}
+ function wirePurchaseButton(id){const button=$(id);if(!button)return;button.disabled=!configured;button.textContent=cfg.mode==='live'?'Comprar as 5 histórias por R$ 9,90':'Experimentar compra de teste';button.onclick=buy;}
  ['buy-collection','buy-collection-hero'].forEach(wirePurchaseButton);
- ['offer-strip-buy','offer-mid-buy','end-upsell-buy'].forEach(id=>{const button=$(id);if(button)button.textContent='Comprar 5 histórias · R$ 19,90';});
+ ['offer-strip-buy','offer-mid-buy','end-upsell-buy'].forEach(id=>{const button=$(id);if(button)button.textContent='Comprar 5 histórias · R$ 9,90';});
  if(wantsCheckout())showPurchaseIntent();
  if(!configured){section.querySelectorAll('button,input').forEach(el=>el.disabled=true);say('Estamos preparando o acesso à coleção. A história gratuita já está disponível.');}
  else say(mode+'Entre para acessar sua biblioteca.');
